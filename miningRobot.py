@@ -1,3 +1,9 @@
+# Cole Sluggett, Kayla Wheeler
+# CSCI 442- Robot Vision
+# Final Project
+# April 30, 2019
+
+
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import numpy as np
@@ -9,7 +15,7 @@ import imutils
 import client
 import maestro
 
-
+#brightens image
 def brighten(img, value = 70):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
@@ -39,7 +45,7 @@ class KeyControl():
         self.elbow = 6000
         self.hand = 6000
 
-
+    #controls that control head movement
     def head(self,key):
         if key == 'u':
             self.headTilt = 5500
@@ -62,6 +68,7 @@ class KeyControl():
             self.tango.setTarget(HEADTILT, self.headTilt)
             self.tango.setTarget(HEADTURN, self.headTurn)
 
+    #controls that control arm movement
     def arm(self,key):
         if key == 'e1':     #elbow up
             self.elbow = 3400
@@ -100,7 +107,7 @@ class KeyControl():
             self.tango.setTarget(SHOULDER, self.shoulder)
 
 
-
+    ##controls that control motor movement
     def arrow(self,key):
         print(key)
         if key == 'f':
@@ -142,6 +149,7 @@ class KeyControl():
             self.tango.setTarget(MOTORS, self.motors)
             self.tango.setTarget(TURN, self.turn)
 
+#function that has robot find the orange line and move towards it
 def findMarker():
     camera = PiCamera()
     camera.resolution = (640, 480)
@@ -163,7 +171,8 @@ def findMarker():
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         hsv = hsv[200:480,220:380]
-
+        
+        # orange values
         lowerOrange = np.array([10,50,50])
         upperOrange = np.array([45,255,255])
 
@@ -188,12 +197,16 @@ def findMarker():
         rawCapture.truncate(0)
         if warmUp <= 15:
             warmUp += 1
+        
+        
         else:
+            #turns right until it finds the orange color
             if found == False:
                 keys.arrow('r')
                 time.sleep(.5)
                 keys.arrow('s')
             else:
+                #breaks once found
                 if x >= 70 and x <= 90:
                     break
                 if x < 70:
@@ -214,6 +227,7 @@ def findMarker():
                 exit()
     camera.close()
 
+#function that has robot find the first orange line and move towards it
 def findMarker1():
     camera = PiCamera()
     camera.resolution = (640, 480)
@@ -261,10 +275,12 @@ def findMarker1():
         if warmUp <= 15:
             warmUp += 1
         else:
+            #turns right until found
             if found == False:
                 keys.arrow('r')
                 time.sleep(.75)
                 keys.arrow('s')
+            #breaks after found and centered
             else:
                 if x >= 70 and x <= 90:
                     break
@@ -286,6 +302,7 @@ def findMarker1():
                 exit()
     camera.close()
 
+#function that has the robot traverse the rockfield and avoid the white folders
 def rockField():
     camera = PiCamera()
     camera.resolution = (640, 480)
@@ -324,12 +341,13 @@ def rockField():
         orangeMask = cv2.inRange(hsv, lowerOrange, upperOrange)
         orangePath = np.argwhere(orangeMask != 0)
 
-
+        #values of white
         lowerWhite = np.array([100,0,200])
         upperWhite = np.array([180,135,255])
         xLowWhite = np.array([0,0,200])
         xUpperWhite = np.array([10,135,255])
 
+        #masks image to get more of the white from the folders
         whiteMask1 = cv2.inRange(hsv, lowerWhite, upperWhite)
         whiteMask2 = cv2.inRange(hsv, xLowWhite, xUpperWhite)
         whiteMask = whiteMask1 + whiteMask2
@@ -396,14 +414,18 @@ def rockField():
                     break
 
         #print(whiteX)
+        #if white is not in the middle, go forward
         if whiteX >= 155 and whiteX <= 165:
             keys.arrow('f')
+        #if white is on the left side of screen, go right
         if whiteX < 155:
             keys.arrow('r')
+        #if white is on the right side of screen, go left
         if whiteX > 165:
             keys.arrow('l')
     camera.close()
 
+#function that looks for the human to get the ice
 def findHuman():
     camera = PiCamera()
     camera.resolution = (640, 480)
@@ -430,6 +452,7 @@ def findHuman():
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
         width = 0
+        #draws the contours around face
         for (x,y,w,h) in faces:
             found = True
             cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0))
@@ -446,6 +469,7 @@ def findHuman():
             time.sleep(.5)
             keys.arrow('s')
         else:
+
             print(centerX)
             if centerX >= 280 and centerX <= 360: #if person is centered then go forward
                 print("Width:", width)
@@ -463,7 +487,7 @@ def findHuman():
                 keys.arrow('r')
                 time.sleep(.5)
                 keys.arrow('s')
-            if centerX > 360:
+            if centerX > 360: #center face
                 keys.arrow('l')
                 time.sleep(.5)
                 keys.arrow('s')
@@ -476,6 +500,7 @@ def findHuman():
 
     camera.close()
 
+#function that has the robot move his arm up to grab the ice and move it back down
 def getIce():
     camera = PiCamera()
     camera.resolution = (640, 480)
@@ -503,6 +528,7 @@ def getIce():
 
         #hsv = hsv[300:480,160:480] #make screen smaller
 
+        #pink values
         lowerPink = np.array([150,0,200])
         upperPink = np.array([165,135,255])
 
@@ -521,6 +547,7 @@ def getIce():
             frameCount = 0
             frameCountOther +=1
 
+        #closes hand and moves arm down after grabbing the ice
         if frameCount >= 60:
             client.sendData("Thank you for the pink ice")
             keys.arm('h1')
@@ -530,6 +557,7 @@ def getIce():
             time.sleep(.5)
             break
 
+        #asks for pink ice if it doesn't see the pink ice
         if frameCountOther >= 30:
             client.sendData("I Want the pink ice")
             frameCountOther = 0
@@ -544,6 +572,7 @@ def getIce():
         rawCapture.truncate(0)
     camera.close()
 
+#function that has the robot move to the pink box and then drop the ice into the box
 def getBuckets():
     camera = PiCamera()
     camera.resolution = (640, 480)
